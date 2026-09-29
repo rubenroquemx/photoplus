@@ -37,6 +37,7 @@ interface AdminAuthStatus {
 interface DriveFolder {
   id: string;
   name: string;
+  createdTime?: string;
 }
 
 interface Album {
@@ -226,7 +227,8 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           folderId: folder.id,
-          title: folder.name,
+          folderName: folder.name,
+          createdTime: folder.createdTime,
           price: syncPrice,
           watermarkText: syncWatermark,
         }),
@@ -239,7 +241,7 @@ export default function AdminPage() {
       }
 
       setSyncMessage({
-        text: `¡Carpeta "${folder.name}" sincronizada con éxito! (${data.totalPhotos} fotos procesadas)`,
+        text: `¡Carpeta "${folder.name}" sincronizada con éxito con la fecha de Drive y precio base! (${data.totalPhotos} fotos procesadas)`,
         type: "success",
       });
 
@@ -250,6 +252,38 @@ export default function AdminPage() {
       setSyncMessage({ text: msg, type: "error" });
     } finally {
       setSyncingFolderId(null);
+    }
+  };
+
+  const handleAutoSyncAll = async () => {
+    setLoadingFolders(true);
+    setSyncMessage(null);
+
+    try {
+      const res = await fetch("/api/drive/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoSyncAll: true }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error al sincronizar todo");
+      }
+
+      setSyncMessage({
+        text: `¡Sincronización masiva completada! Se procesaron ${data.results?.length || 0} carpetas desde Drive con el nombre de cada carpeta, fecha de creación original y precio base configurado.`,
+        type: "success",
+      });
+
+      fetchAlbums();
+      fetchDriveFolders();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al sincronizar todas las carpetas";
+      setSyncMessage({ text: msg, type: "error" });
+    } finally {
+      setLoadingFolders(false);
     }
   };
 
@@ -504,14 +538,24 @@ export default function AdminPage() {
                     Selecciona una carpeta para sincronizarla como álbum fotográfico en tu tienda.
                   </p>
                 </div>
-                <button
-                  onClick={fetchDriveFolders}
-                  disabled={loadingFolders || !authStatus?.driveConnected}
-                  className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingFolders ? "animate-spin" : ""}`} />
-                  <span>Actualizar lista</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleAutoSyncAll}
+                    disabled={loadingFolders || !authStatus?.driveConnected}
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-rose-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <FolderSync className="w-3.5 h-3.5" />
+                    <span>Sincronizar Todas las Carpetas Automáticamente</span>
+                  </button>
+                  <button
+                    onClick={fetchDriveFolders}
+                    disabled={loadingFolders || !authStatus?.driveConnected}
+                    className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-300 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingFolders ? "animate-spin" : ""}`} />
+                    <span>Actualizar lista</span>
+                  </button>
+                </div>
               </div>
 
               {!authStatus?.driveConnected ? (
@@ -555,6 +599,11 @@ export default function AdminPage() {
                             <span className="text-[11px] text-neutral-500 block truncate font-mono">
                               ID: {folder.id}
                             </span>
+                            {folder.createdTime && (
+                              <span className="text-[11px] text-amber-400 font-medium block mt-0.5">
+                                Creada en Drive: {new Date(folder.createdTime).toLocaleDateString()}
+                              </span>
+                            )}
                           </div>
                         </div>
 

@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { getDriveFileReadableStream } from "@/lib/google-drive";
+import { getCustomerSession } from "@/lib/customer-auth";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 import sharp from "sharp";
 
 async function generateCleanOriginalHiResBuffer(title: string): Promise<Buffer> {
@@ -59,6 +61,31 @@ export async function GET(
       return new Response(
         "Esta orden aún no ha sido acreditada. Por favor espera a que se complete el pago.",
         { status: 403 }
+      );
+    }
+
+    // AUTHENTICATED DOWNLOAD SECURITY:
+    // Only the customer who owns the order (or store admin) can download this photo!
+    // Non-shareable link.
+    const customerSession = await getCustomerSession();
+    const isAdmin = await isAdminAuthenticated();
+
+    const isOwner =
+      customerSession &&
+      (customerSession.id === item.order.customerId ||
+        customerSession.email.toLowerCase() === item.order.customerEmail.toLowerCase());
+
+    if (!isOwner && !isAdmin) {
+      const buyerEmailMasked = item.order.customerEmail.replace(/(.{2})(.*)(?=@)/, (_gp1, gp2, gp3) => {
+        return gp2 + "*".repeat(gp3.length);
+      });
+
+      return new Response(
+        `Acceso Denegado: Este archivo es intransferible y no puede compartirse. Solo el titular de la compra (${buyerEmailMasked}) puede descargarlo desde su cuenta con sesión iniciada en Google.`,
+        {
+          status: 403,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        }
       );
     }
 

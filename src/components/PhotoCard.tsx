@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Check, Maximize2, ShieldAlert } from "lucide-react";
+import { ShoppingCart, Check, Maximize2, ShieldAlert, Heart } from "lucide-react";
 import { useCartStore } from "@/lib/cart";
 
 export interface PhotoData {
@@ -21,10 +21,14 @@ export interface PhotoData {
 interface PhotoCardProps {
   photo: PhotoData;
   onPreviewClick: (photo: PhotoData) => void;
+  initialIsFavorite?: boolean;
 }
 
-export default function PhotoCard({ photo, onPreviewClick }: PhotoCardProps) {
+export default function PhotoCard({ photo, onPreviewClick, initialIsFavorite = false }: PhotoCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const [togglingFav, setTogglingFav] = useState(false);
+
   const addItem = useCartStore((s) => s.addItem);
   const removeItem = useCartStore((s) => s.removeItem);
   const isItemInCart = useCartStore((s) => s.hasItem(photo.id));
@@ -45,6 +49,37 @@ export default function PhotoCard({ photo, onPreviewClick }: PhotoCardProps) {
         albumTitle: photo.album.title,
         previewUrl,
       });
+    }
+  };
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (togglingFav) return;
+    setTogglingFav(true);
+
+    try {
+      const res = await fetch("/api/customer/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId: photo.id }),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 401) {
+        if (confirm("Inicia sesión con tu cuenta de Google para guardar tus fotos favoritas. ¿Deseas iniciar sesión ahora?")) {
+          window.location.href = "/api/auth/customer/google";
+        }
+        return;
+      }
+
+      if (typeof data.isFavorite === "boolean") {
+        setIsFavorite(data.isFavorite);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTogglingFav(false);
     }
   };
 
@@ -75,12 +110,30 @@ export default function PhotoCard({ photo, onPreviewClick }: PhotoCardProps) {
         {/* Watermark Protection Tag */}
         <div className="absolute top-2.5 left-2.5 bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
           <ShieldAlert className="w-3 h-3 text-amber-400" />
-          <span>Muestra protegida</span>
+          <span>Muestra</span>
         </div>
 
-        {/* Zoom Button on hover */}
-        <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md text-white p-1.5 rounded-lg hover:bg-black/80">
-          <Maximize2 className="w-4 h-4" />
+        {/* Action icons top right: Favorite & Zoom */}
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+          {/* Favorite button */}
+          <button
+            onClick={handleFavoriteToggle}
+            type="button"
+            disabled={togglingFav}
+            aria-label="Marcar como favorita"
+            className={`p-1.5 rounded-lg backdrop-blur-md transition-all cursor-pointer ${
+              isFavorite
+                ? "bg-rose-600 text-white shadow-md shadow-rose-600/30"
+                : "bg-black/60 text-white hover:bg-black/80"
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? "fill-white" : ""}`} />
+          </button>
+
+          {/* Zoom button */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md text-white p-1.5 rounded-lg hover:bg-black/80">
+            <Maximize2 className="w-4 h-4" />
+          </div>
         </div>
       </div>
 

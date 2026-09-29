@@ -41,10 +41,23 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    // Check customer session or existing customer
+    const { getCustomerSession } = await import("@/lib/customer-auth");
+    const customerSession = await getCustomerSession();
+    let customerId = customerSession?.id;
+
+    if (!customerId) {
+      const existingCustomer = await prisma.customer.findUnique({
+        where: { email: customerEmail.trim().toLowerCase() },
+      });
+      if (existingCustomer) customerId = existingCustomer.id;
+    }
+
     // Create Order and Items in DB
     const order = await prisma.order.create({
       data: {
         orderNumber,
+        customerId: customerId || null,
         customerEmail: customerEmail.trim().toLowerCase(),
         customerName: customerName ? customerName.trim() : null,
         customerPhone: customerPhone ? customerPhone.trim() : null,

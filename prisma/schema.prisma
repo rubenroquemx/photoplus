@@ -20,22 +20,48 @@ model AdminSession {
   updatedAt    DateTime  @updatedAt
 }
 
-model Album {
-  id                String   @id @default(cuid())
-  driveFolderId     String   @unique
-  title             String
-  description       String?
-  coverPhotoDriveId String?
-  defaultPrice      Float    @default(50.0)
-  currency          String   @default("MXN")
-  isPublished       Boolean  @default(true)
-  watermarkText     String?
-  photosCount       Int      @default(0)
-  lastSyncedAt      DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+model Customer {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String?
+  picture    String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  photos            Photo[]
+  orders     Order[]
+  favorites  Favorite[]
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  photoId    String
+  photo      Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, photoId])
+  @@index([customerId])
+  @@index([photoId])
+}
+
+model Album {
+  id                     String    @id @default(cuid())
+  driveFolderId          String    @unique
+  title                  String
+  description            String?
+  coverPhotoDriveId      String?
+  defaultPrice           Float     @default(50.0)
+  currency               String    @default("MXN")
+  isPublished            Boolean   @default(true)
+  watermarkText          String?
+  photosCount            Int       @default(0)
+  driveFolderCreatedTime DateTime?
+  lastSyncedAt           DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  photos                 Photo[]
 }
 
 model Photo {
@@ -54,6 +80,7 @@ model Photo {
   updatedAt    DateTime    @updatedAt
 
   orderItems   OrderItem[]
+  favorites    Favorite[]
 
   @@index([albumId])
 }
@@ -61,6 +88,8 @@ model Photo {
 model Order {
   id              String      @id @default(cuid())
   orderNumber     String      @unique
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerEmail   String
   customerName    String?
   customerPhone   String?
@@ -74,6 +103,9 @@ model Order {
   updatedAt       DateTime    @updatedAt
 
   items           OrderItem[]
+
+  @@index([customerId])
+  @@index([customerEmail])
 }
 
 model OrderItem {

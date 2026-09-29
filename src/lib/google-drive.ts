@@ -101,8 +101,8 @@ export async function listDriveFolders() {
   const folderList = await drive.files.list({
     q: "mimeType = 'application/vnd.google-apps.folder' and trashed = false",
     fields: "files(id, name, createdTime, modifiedTime, shared)",
-    pageSize: 50,
-    orderBy: "name",
+    pageSize: 100,
+    orderBy: "createdTime desc",
   });
 
   return folderList.data.files || [];
