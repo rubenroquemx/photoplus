@@ -1,0 +1,108 @@
+// PhotoPlus Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminSession {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  picture      String?
+  refreshToken String?
+  accessToken  String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Album {
+  id                String   @id @default(cuid())
+  driveFolderId     String   @unique
+  title             String
+  description       String?
+  coverPhotoDriveId String?
+  defaultPrice      Float    @default(50.0)
+  currency          String   @default("MXN")
+  isPublished       Boolean  @default(true)
+  watermarkText     String?
+  photosCount       Int      @default(0)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  photos            Photo[]
+}
+
+model Photo {
+  id           String      @id @default(cuid())
+  albumId      String
+  album        Album       @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  driveFileId  String      @unique
+  name         String
+  mimeType     String      @default("image/jpeg")
+  width        Int?
+  height       Int?
+  size         Int?
+  price        Float
+  isAvailable  Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  orderItems   OrderItem[]
+
+  @@index([albumId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerEmail   String
+  customerName    String?
+  customerPhone   String?
+  total           Float
+  currency        String      @default("MXN")
+  status          String      @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  paymentProvider String      @default("MERCADO_PAGO")
+  mpPreferenceId  String?
+  mpPaymentId     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  photoId       String
+  photo         Photo     @relation(fields: [photoId], references: [id], onDelete: Restrict)
+  price         Float
+  downloadToken String    @unique @default(uuid())
+  downloadCount Int       @default(0)
+  downloadLimit Int       @default(10)
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+
+  @@index([orderId])
+  @@index([photoId])
+}
+
+model StoreSetting {
+  id               String   @id @default("main")
+  storeName        String   @default("PhotoPlus Studio")
+  storeTagline     String   @default("Galería y venta de fotografías de alta resolución")
+  defaultPrice     Float    @default(50.0)
+  currency         String   @default("MXN")
+  watermarkText    String   @default("PHOTOPLUS • MUESTRA")
+  watermarkOpacity Float    @default(0.40)
+  contactEmail     String?
+  contactPhone     String?
+  instagramUrl     String?
+  updatedAt        DateTime @updatedAt
+}
