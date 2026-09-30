@@ -1,164 +1,145 @@
 # 📸 PhotoPlus - Tienda de Fotografías Sincronizada con Google Drive
 
-**PhotoPlus** es una plataforma moderna para fotógrafos profesionales y creadores que permite vender fotografías digitales en alta resolución sincronizadas directamente desde carpetas de **Google Drive**, con pasarela de pagos mediante **Mercado Pago** y protección de muestras con **marcas de agua dinámicas**.
+**PhotoPlus** es una plataforma profesional de comercio electrónico para fotógrafos que permite vender fotografías digitales en alta resolución sincronizadas directamente desde **Google Drive**, con pasarela de pagos mediante **Mercado Pago**, autenticación de clientes con **Google**, panel de favoritas y entrega digital con **enlaces de descarga intransferibles y protegidos**.
 
 ---
 
 ## ✨ Características Principales
 
-- **☁️ Sincronización Directa con Google Drive (OAuth 2.0)**:
-  - Vincula tu cuenta de Google con un clic desde el panel de administración.
-  - Explora y selecciona carpetas de Google Drive para importarlas como álbumes o eventos en la tienda.
-  - Sincronización automática de fotos, nombres de archivo y metadatos.
+- **☁️ Sincronización Automática con Google Drive**:
+  - Lee carpetas de Google Drive y crea álbumes con el **nombre exacto de la carpeta**.
+  - Asigna la **fecha original de creación** de la carpeta en Drive al álbum.
+  - Asigna automáticamente el **precio base configurado** a todas las fotos.
+  - Botón de sincronización masiva para procesar todas las carpetas nuevas en 1 clic.
 
 - **🛡️ Protección de Fotografías con Marca de Agua (Sharp)**:
-  - Las fotos en el catálogo público se sirven con marca de agua diagonal y banner protector generados dinámicamente en el servidor.
-  - El cliente **nunca tiene acceso a la foto original** antes de pagar.
-  - Personalización de marca de agua y opacidad desde la configuración.
+  - Muestras protegidas con marca de agua diagonal y banner de advertencia generados en tiempo real.
+  - El cliente nunca tiene acceso al archivo original sin marcas antes de pagar.
 
-- **🛒 Venta por Foto Individual**:
-  - Catálogo filtrable por álbum o evento con buscador rápido.
-  - Visualización en cuadrícula y vista detallada (lightbox) con zoom.
-  - Carrito de compras interactivo con selección de fotos individuales.
+- **👤 Cuentas de Clientes con Google**:
+  - Inicio de sesión con Google para compradores.
+  - **Panel de Fotos Favoritas**: Guarda fotos deseadas con 1 clic en el corazón y opción para comprarlas todas juntas.
+  - **Panel de Compras**: Historial de pedidos y acceso a todas sus fotos adquiridas.
+
+- **🔒 Descargas Intransferibles y Seguras**:
+  - Los enlaces de descarga son personales y están vinculados exclusivamente a la cuenta de Google del comprador.
+  - Si el enlace se comparte, el sistema deniega el acceso solicitando iniciar sesión con la cuenta de Google titular.
+  - Control de límite de descargas (10 intentos) y caducidad automática (7 días).
 
 - **💳 Integración con Mercado Pago**:
-  - Generación de preferencias de pago con **Checkout Pro** (soporte para tarjetas, transferencias SPEI y pagos en efectivo).
-  - Webhooks para confirmación automática e instantánea del pago.
-  - Modo Demostración integrado para probar compras completas sin cobros reales.
+  - Checkout Pro oficial para México y LATAM (tarjetas de crédito/débito, transferencias SPEI, OXXO/efectivo).
+  - Webhooks automáticos para acreditación inmediata de compras.
 
-- **⚡ Entrega Digital Segura**:
-  - Al acreditarse el pago, se generan **tokens únicos y seguros de descarga**.
-  - Los clientes descargan el archivo original nativo directamente desde Google Drive (sin marcas ni compresión).
-  - Límite de descargas (por defecto 10 intentos) y caducidad programable (7 días).
-
-- **🎛️ Panel de Administración Completo (`/admin`)**:
-  - Conexión / Reconexión con Google Drive.
-  - Explorador de carpetas de Drive para importar álbumes.
-  - Edición de precios por foto y control de visibilidad (público / oculto).
-  - Historial de órdenes, clientes y métricas de ingresos en MXN.
-  - Personalización de marca del estudio, eslogan y parámetros de marca de agua.
+- **🎛️ Panel de Administración (`/admin`)**:
+  - Conexión OAuth 2.0 con Google Drive.
+  - Métricas de ingresos en MXN, fotos vendidas y órdenes totales.
+  - Control de álbumes, visibilidad pública y precios personalizados.
+  - Configuración de marca de agua, eslogan y datos de contacto.
 
 ---
 
-## 🚀 Tecnologías Utilizadas
+## 🚀 Despliegue en Producción
 
-- **Frontend & Backend**: [Next.js](https://nextjs.org/) (App Router, Server Components & Route Handlers)
-- **Lenguaje**: TypeScript
-- **Estilos**: Tailwind CSS 4
-- **Base de Datos & ORM**: Prisma ORM con SQLite (fácilmente migrable a PostgreSQL / Turso / Supabase)
-- **Procesamiento de Imágenes**: [Sharp](https://sharp.pixelplumbing.com/)
-- **APIs Externas**:
-  - Google Drive API v3 (`googleapis`)
-  - Mercado Pago SDK Node (`mercadopago`)
-- **Gestión de Estado**: Zustand con persistencia local
+PhotoPlus está optimizado con **Next.js Standalone**, encabezados de seguridad HTTP (HSTS, CSP, X-Frame-Options) y contenedor Docker multi-stage.
+
+### Opción A: Despliegue con Docker / Docker Compose (Recomendado para VPS / Railway / Render)
+
+1. **Configurar el archivo `.env` en tu servidor:**
+   ```bash
+   cp .env.example .env
+   # Edita .env con tus credenciales reales de Google y Mercado Pago
+   ```
+
+2. **Iniciar la aplicación con Docker Compose:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Ejecutar migraciones y sembrar si es necesario:**
+   ```bash
+   docker compose exec photoplus npx prisma db push
+   ```
+
+La aplicación estará activa en el puerto `3005` (o el puerto configurado) con almacenamiento persistente en el volumen Docker `photoplus_data`.
 
 ---
 
-## 🛠️ Instalación y Puesta en Marcha
+### Opción B: Despliegue en Railway / Render
 
-### 1. Clonar el repositorio
+1. Conecta tu repositorio de GitHub `https://github.com/rubenroquemx/photoplus` en el panel de Railway o Render.
+2. Agrega las **Variables de Entorno** (Environment Variables) listadas abajo.
+3. El comando de build configurado en `package.json` (`npm run build`) ejecutará automáticamente `prisma generate` y compilará la aplicación en modo Standalone.
+4. El comando de inicio es `npm start` (o `node server.js`).
+
+---
+
+### Opción C: Despliegue en Vercel
+
+1. Importa el repositorio desde GitHub en [vercel.com](https://vercel.com).
+2. Para la base de datos en Vercel Serverless, puedes usar una base de datos PostgreSQL gratuita o gestionada (Supabase, Neon o Turso):
+   - Cambia `provider = "postgresql"` en `prisma/schema.prisma` y coloca tu `DATABASE_URL` en las variables de entorno de Vercel.
+3. Agrega las variables de entorno en Vercel y haz clic en **Deploy**.
+
+---
+
+## 🔑 Variables de Entorno de Producción
+
+| Variable | Descripción | Ejemplo / Valor |
+|---|---|---|
+| `NODE_ENV` | Entorno de ejecución | `production` |
+| `DATABASE_URL` | Conexión de base de datos | `file:/app/prisma/prod.db` o Postgres URL |
+| `NEXT_PUBLIC_APP_URL` | URL pública de tu tienda (con HTTPS) | `https://tu-dominio.com` |
+| `GOOGLE_CLIENT_ID` | Client ID de Google Cloud Console | `xxxx.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Client Secret de Google Cloud Console | `GOCSPX-xxxx` |
+| `GOOGLE_REDIRECT_URI` | URI de redirección autorizada en Google | `https://tu-dominio.com/api/auth/google/callback` |
+| `MERCADO_PAGO_ACCESS_TOKEN` | Token de acceso de producción de MP | `APP_USR-xxxx` |
+| `MERCADO_PAGO_PUBLIC_KEY` | Llave pública de producción de MP | `APP_USR-xxxx` |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Secreto del webhook de MP (opcional) | `xxxx` |
+| `ADMIN_PASSWORD` | Contraseña para entrar a `/admin` | `TuContraseñaSegura2026!` |
+| `ADMIN_SESSION_SECRET` | Cadena aleatoria para firmar cookies | Cadena aleatoria de 32+ caracteres |
+
+---
+
+## 📋 Pasos para Credenciales de Producción
+
+### 1. Google Cloud Console (Drive API y OAuth)
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/).
+2. En **APIs & Services > Credentials > Tu Cliente OAuth**:
+   - En **Authorized JavaScript origins**, agrega: `https://tu-dominio.com`.
+   - En **Authorized redirect URIs**, agrega:
+     - `https://tu-dominio.com/api/auth/google/callback` (Admin / Drive)
+     - `https://tu-dominio.com/api/auth/customer/google/callback` (Clientes)
+3. En **OAuth consent screen**, cambia el estado a **In Production** (o mantén tus correos en usuarios de prueba).
+
+### 2. Mercado Pago Producción
+1. Ingresa a [Mercado Pago Developers](https://www.mercadopago.com.mx/developers).
+2. Activa tus **Credenciales de producción** (`APP_USR-...`).
+3. En **Webhooks**, configura la URL de notificación: `https://tu-dominio.com/api/webhooks/mercadopago` con el evento `payment`.
+
+---
+
+## 💻 Desarrollo Local
+
 ```bash
+# 1. Clonar e instalar
 git clone https://github.com/rubenroquemx/photoplus.git
 cd photoplus
-```
-
-### 2. Instalar dependencias
-```bash
 npm install
-```
 
-### 3. Configurar variables de entorno
-Crea un archivo `.env` en la raíz (puedes basarte en `.env.example`):
-
-```env
-# Base de datos
-DATABASE_URL="file:./dev.db"
-
-# URL base de tu aplicación
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-# Credenciales de Google Cloud OAuth 2.0 (Google Drive API)
-GOOGLE_CLIENT_ID="tu-google-client-id.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="tu-google-client-secret"
-GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
-
-# Credenciales de Mercado Pago
-MERCADO_PAGO_ACCESS_TOKEN="TEST-..."
-MERCADO_PAGO_PUBLIC_KEY="TEST-..."
-MERCADO_PAGO_WEBHOOK_SECRET=""
-
-# Contraseña de acceso al panel administrador
-ADMIN_PASSWORD="adminphotoplus"
-ADMIN_SESSION_SECRET="tu_clave_secreta_para_sesion"
-```
-
-### 4. Inicializar la base de datos y datos de muestra
-```bash
-# Crear las tablas en SQLite
+# 2. Inicializar base de datos
 npx prisma db push
-
-# (Opcional) Cargar álbumes y fotos de demostración
 npx tsx prisma/seed.ts
-```
 
-### 5. Iniciar el servidor de desarrollo
-```bash
+# 3. Iniciar servidor local (Puerto 3005)
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la tienda.
-
----
-
-## 🔑 Guía para Obtener las Credenciales
-
-### A. Google Drive API (OAuth 2.0)
-1. Ve a [Google Cloud Console](https://console.cloud.google.com/).
-2. Crea un proyecto nuevo (ej. `PhotoPlus Store`).
-3. Ve a **APIs & Services > Library** y habilita **Google Drive API**.
-4. En **APIs & Services > OAuth consent screen**:
-   - Selecciona **External** y llena los datos requeridos.
-   - En **Scopes**, añade: `https://www.googleapis.com/auth/drive.readonly`, `.../userinfo.profile`, `.../userinfo.email`.
-   - En **Test users**, agrega el correo de Google con el que sincronizarás tus fotos.
-5. En **APIs & Services > Credentials**:
-   - Haz clic en **Create Credentials > OAuth client ID**.
-   - Tipo de aplicación: **Web application**.
-   - En **Authorized redirect URIs**, agrega: `http://localhost:3000/api/auth/google/callback` (y tu dominio en producción).
-6. Copia el **Client ID** y **Client Secret** en tu `.env`.
-
-### B. Mercado Pago
-1. Ingresa a [Mercado Pago Developers](https://www.mercadopago.com.mx/developers).
-2. Crea una aplicación y ve a **Credenciales de prueba** (o de producción).
-3. Copia el **Access Token** y **Public Key** en tu archivo `.env`.
-
----
-
-## 📦 Estructura del Código
-
-```
-photoplus/
-├── prisma/
-│   ├── schema.prisma           # Modelos de BD (Album, Photo, Order, OrderItem, Setting)
-│   └── seed.ts                 # Datos de prueba
-├── src/
-│   ├── app/
-│   │   ├── page.tsx            # Galería pública y catálogo
-│   │   ├── admin/page.tsx      # Panel de administración y sincronizador
-│   │   ├── order/[id]/page.tsx # Confirmación y descarga segura
-│   │   └── api/
-│   │       ├── auth/           # OAuth Google y login admin
-│   │       ├── drive/          # Listado y sincronización de carpetas
-│   │       ├── photos/         # Previsualizaciones con marca de agua
-│   │       ├── checkout/       # Creación de pagos en Mercado Pago
-│   │       ├── webhooks/       # Notificaciones de pago
-│   │       └── download/       # Descarga tokenizada de alta resolución
-│   ├── components/             # Navbar, Footer, PhotoCard, Lightbox, CartDrawer
-│   └── lib/                    # Clientes de Prisma, Google Drive, Sharp y MP
-└── .env.example
-```
+- **Tienda**: [http://localhost:3005](http://localhost:3005)
+- **Panel Admin**: [http://localhost:3005/admin](http://localhost:3005/admin) (Contraseña por defecto: `adminphotoplus`)
+- **Portal de Cliente**: [http://localhost:3005/mi-cuenta](http://localhost:3005/mi-cuenta)
 
 ---
 
 ## 📄 Licencia
 
-Desarrollado para fotógrafos independientes y agencias. Licencia MIT.
+Desarrollado con arquitectura moderna en Next.js, Prisma y Tailwind CSS. Licencia MIT.

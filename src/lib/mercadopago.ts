@@ -29,7 +29,9 @@ export async function createCheckoutPreference(options: CreatePreferenceOptions)
   const client = getMercadoPagoClient();
   const preference = new Preference(client);
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3005").replace(/\/$/, "");
+  const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1");
+  const notificationUrl = isLocalhost ? undefined : `${appUrl}/api/webhooks/mercadopago`;
 
   const body = {
     items: options.items.map((item) => ({
@@ -52,7 +54,7 @@ export async function createCheckoutPreference(options: CreatePreferenceOptions)
     auto_return: "approved",
     external_reference: options.orderId,
     statement_descriptor: "PHOTOPLUS FOTO",
-    notification_url: `${appUrl}/api/webhooks/mercadopago`,
+    ...(notificationUrl ? { notification_url: notificationUrl } : {}),
   };
 
   const response = await preference.create({ body });
