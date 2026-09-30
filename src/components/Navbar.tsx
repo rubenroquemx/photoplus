@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Camera, ShoppingBag, ShieldCheck, Heart, User, Sparkles } from "lucide-react";
+import { Camera, ShoppingBag, Heart, User, Sparkles } from "lucide-react";
 import { useCartStore } from "@/lib/cart";
 import { useState, useEffect } from "react";
 
@@ -48,8 +48,8 @@ export default function Navbar({ onOpenCart, storeName = "PhotoPlus" }: NavbarPr
             <span className="font-extrabold text-xl tracking-tight text-neutral-900 dark:text-white">
               {storeName}
             </span>
-            <span className="hidden sm:inline-block ml-2 text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
-              Drive Sync
+            <span className="hidden sm:inline-block ml-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700">
+              Estudio
             </span>
           </div>
         </Link>
@@ -115,14 +115,6 @@ export default function Navbar({ onOpenCart, storeName = "PhotoPlus" }: NavbarPr
               <span>Acceso Google</span>
             </a>
           )}
-
-          <Link
-            href="/admin"
-            className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 transition-colors"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-neutral-400" />
-            <span className="hidden sm:inline">Admin</span>
-          </Link>
 
           {/* Cart Button */}
           <button

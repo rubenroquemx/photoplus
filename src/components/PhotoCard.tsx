@@ -67,9 +67,7 @@ export default function PhotoCard({ photo, onPreviewClick, initialIsFavorite = f
       const data = await res.json();
 
       if (res.status === 401) {
-        if (confirm("Inicia sesión con tu cuenta de Google para guardar tus fotos favoritas. ¿Deseas iniciar sesión ahora?")) {
-          window.location.href = "/api/auth/customer/google";
-        }
+        window.location.href = "/api/auth/customer/google";
         return;
       }
 

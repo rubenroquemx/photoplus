@@ -6,8 +6,7 @@ import Footer from "@/components/Footer";
 import PhotoCard, { PhotoData } from "@/components/PhotoCard";
 import PhotoModal from "@/components/PhotoModal";
 import CartDrawer from "@/components/CartDrawer";
-import { Sparkles, Search, Layers, ShieldCheck, ArrowRight, RefreshCw, FolderSync } from "lucide-react";
-import Link from "next/link";
+import { Sparkles, Search, Layers, ShieldCheck, FolderSync } from "lucide-react";
 
 interface AlbumItem {
   id: string;
@@ -179,26 +178,14 @@ export default function HomePage() {
               </div>
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
                 {albums.length === 0
-                  ? "Aún no hay álbumes sincronizados desde Google Drive"
+                  ? "Próximamente: galerías en camino"
                   : "No se encontraron fotos con ese filtro o búsqueda"}
               </h2>
               <p className="text-sm text-neutral-500 max-w-md mx-auto mt-2">
                 {albums.length === 0
-                  ? "Ingresa al panel de administración para conectar tu cuenta de Google Drive y sincronizar tus carpetas de fotos con un solo clic."
+                  ? "Estamos preparando las galerías de fotos. Vuelve pronto para explorar y adquirir tus imágenes favoritas en alta resolución."
                   : "Intenta cambiar el término de búsqueda o selecciona otro álbum."}
               </p>
-
-              {albums.length === 0 && (
-                <div className="mt-6">
-                  <Link
-                    href="/admin"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg shadow-rose-600/25 transition-all"
-                  >
-                    <span>Ir al Panel de Administración</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              )}
             </div>
           )}
         </section>

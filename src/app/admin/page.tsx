@@ -116,6 +116,7 @@ export default function AdminPage() {
     driveRootFolderId: null,
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   const fetchAuthStatus = async () => {
     try {
@@ -369,7 +370,8 @@ export default function AdminPage() {
         body: JSON.stringify(settings),
       });
       if (res.ok) {
-        alert("Configuración guardada correctamente");
+        setSettingsSaved(true);
+        setTimeout(() => setSettingsSaved(false), 3000);
       }
     } catch (err) {
       console.error(err);
@@ -979,7 +981,11 @@ export default function AdminPage() {
                                   : "bg-rose-950/80 text-rose-400 border border-rose-800"
                               }`}
                             >
-                              {ord.status}
+                              {ord.status === "APPROVED"
+                                ? "Aprobado"
+                                : ord.status === "PENDING"
+                                ? "Pendiente"
+                                : "Rechazado"}
                             </span>
                           </td>
                           <td className="py-4 text-neutral-400">
@@ -1065,12 +1071,26 @@ export default function AdminPage() {
                 />
               </div>
 
+              {settingsSaved && (
+                <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>¡Configuración guardada correctamente!</span>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={savingSettings}
-                className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {savingSettings ? "Guardando cambios..." : "Guardar Configuración"}
+                {savingSettings ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Guardando cambios...</span>
+                  </>
+                ) : (
+                  <span>Guardar Configuración</span>
+                )}
               </button>
             </form>
           </div>
