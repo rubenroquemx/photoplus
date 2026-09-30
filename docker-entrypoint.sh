@@ -1,14 +1,10 @@
 #!/bin/sh
 set -e
 
-echo "=========================================="
-echo "  PhotoPlus - Iniciando en Producción"
-echo "=========================================="
-
-if [ -n "$DATABASE_URL" ]; then
-  echo "==> Verificando y aplicando tablas en PostgreSQL (Prisma db push)..."
-  npx prisma db push --skip-generate || echo "Advertencia: No se pudo ejecutar prisma db push en este intento, continuando..."
+if [ -n "$DATABASE_URL" ] && [ -f "./node_modules/prisma/build/index.js" ]; then
+  echo "==> Verificando y sincronizando tablas en PostgreSQL con Prisma..."
+  node ./node_modules/prisma/build/index.js db push --skip-generate || echo "Aviso: Se continuó sin db push inmediato."
 fi
 
-echo "==> Iniciando servidor web Next.js..."
+echo "==> Iniciando PhotoPlus en producción..."
 exec node server.js
