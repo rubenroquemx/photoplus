@@ -85,7 +85,6 @@ interface StoreSettings {
 export default function AdminPage() {
   const [authStatus, setAuthStatus] = useState<AdminAuthStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -197,28 +196,6 @@ export default function AdminPage() {
       }
     }
   }, [authStatus?.authenticated, authStatus?.driveConnected]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-
-    try {
-      const res = await fetch("/api/auth/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        fetchAuthStatus();
-      } else {
-        setLoginError(data.error || "Contraseña inválida");
-      }
-    } catch {
-      setLoginError("Error de conexión al autenticar");
-    }
-  };
 
   const handleLogout = async () => {
     await fetch("/api/auth/admin", {
@@ -366,27 +343,27 @@ export default function AdminPage() {
       <div className="min-h-screen flex flex-col bg-neutral-950 text-white">
         <Navbar />
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 p-8 rounded-3xl shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-500 flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-6 h-6" />
+          <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 p-8 sm:p-10 rounded-3xl shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500/20 to-emerald-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <HardDrive className="w-7 h-7" />
             </div>
-            <h1 className="text-2xl font-black text-center">Panel de Administración</h1>
-            <p className="text-sm text-neutral-400 text-center mt-1">
-              Accede para gestionar Google Drive, catálogo y ventas.
+
+            <h1 className="text-2xl font-black">Panel de Administración</h1>
+            <p className="text-sm text-neutral-400 mt-2">
+              Acceso exclusivo mediante la cuenta de Google vinculada a tu Google Drive.
             </p>
 
             {loginError && (
-              <div className="mt-4 p-3.5 rounded-xl bg-rose-950/60 border border-rose-900 text-rose-400 text-xs flex items-start gap-2">
+              <div className="mt-5 p-3.5 rounded-xl bg-rose-950/60 border border-rose-900 text-rose-400 text-xs flex items-start text-left gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{loginError}</span>
               </div>
             )}
 
-            {/* Iniciar sesión con Google (Admin) */}
-            <div className="mt-6 space-y-2">
+            <div className="mt-8 space-y-3">
               <a
                 href="/api/auth/google"
-                className="w-full py-3.5 px-4 bg-white hover:bg-neutral-100 text-neutral-900 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-3 transition-all cursor-pointer"
+                className="w-full py-4 px-5 bg-white hover:bg-neutral-100 text-neutral-900 rounded-2xl font-bold text-sm shadow-xl flex items-center justify-center gap-3 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -406,51 +383,22 @@ export default function AdminPage() {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Iniciar sesión con Google</span>
+                <span>Acceder con Google Drive</span>
               </a>
 
               {authStatus?.adminEmail ? (
-                <p className="text-center text-[11px] text-neutral-400">
-                  Cuenta autorizada: <span className="text-emerald-400 font-mono font-medium">{authStatus.adminEmail}</span>
-                </p>
+                <div className="pt-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-800/80 border border-neutral-700/60 text-[11px] text-neutral-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Admin autorizado: <span className="text-white font-mono font-medium">{authStatus.adminEmail}</span>
+                  </span>
+                </div>
               ) : (
-                <p className="text-center text-[11px] text-neutral-500">
-                  Vincula tu cuenta de Google para administrar y conectar Drive
+                <p className="text-xs text-neutral-500 pt-2">
+                  Autenticación segura con Google OAuth 2.0 y Google Drive API
                 </p>
               )}
             </div>
-
-            <div className="relative my-6 text-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-800"></div>
-              </div>
-              <span className="relative bg-neutral-900 px-3 text-[11px] uppercase tracking-wider text-neutral-500 font-medium">
-                o contraseña maestra
-              </span>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                  Contraseña de acceso
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Contraseña (por defecto: adminphotoplus)"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder:text-neutral-500"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
-              >
-                Entrar con contraseña
-              </button>
-            </form>
           </div>
         </div>
         <Footer />
