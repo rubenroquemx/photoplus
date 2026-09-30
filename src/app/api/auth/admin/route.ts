@@ -16,7 +16,12 @@ export async function GET() {
     const { isAuthorizedAdminEmail } = await import("@/lib/admin-auth");
     const configured = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
     const sessions = await prisma.adminSession.findMany({
-      where: { refreshToken: { not: null } },
+      where: {
+        OR: [
+          { refreshToken: { not: null } },
+          { accessToken: { not: null } },
+        ],
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         email: true,

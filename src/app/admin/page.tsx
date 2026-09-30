@@ -577,7 +577,7 @@ export default function AdminPage() {
                 />
                 <button
                   type="submit"
-                  disabled={!manualFolderInput.trim() || !authStatus?.driveConnected}
+                  disabled={!manualFolderInput.trim()}
                   className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer whitespace-nowrap"
                 >
                   Sincronizar Esta Carpeta

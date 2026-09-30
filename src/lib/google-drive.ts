@@ -22,7 +22,8 @@ export function getGoogleAuthUrl(): string {
 
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
-    prompt: "consent",
+    prompt: "consent select_account",
+    include_granted_scopes: true,
     scope: scopes,
   });
 }
@@ -82,7 +83,10 @@ export async function getAuthenticatedDriveClient(): Promise<drive_v3.Drive> {
 
   const sessions = await prisma.adminSession.findMany({
     where: {
-      refreshToken: { not: null },
+      OR: [
+        { refreshToken: { not: null } },
+        { accessToken: { not: null } },
+      ],
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -91,14 +95,14 @@ export async function getAuthenticatedDriveClient(): Promise<drive_v3.Drive> {
     ? sessions.find((s) => isAuthorizedAdminEmail(s.email))
     : sessions[0];
 
-  if (!session || !session.refreshToken) {
+  if (!session || (!session.refreshToken && !session.accessToken)) {
     throw new Error("No hay una cuenta de Google Drive autorizada conectada. Por favor conecta tu cuenta de administrador en el panel.");
   }
 
   const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials({
     access_token: session.accessToken || undefined,
-    refresh_token: session.refreshToken,
+    refresh_token: session.refreshToken || undefined,
     expiry_date: session.expiresAt ? session.expiresAt.getTime() : undefined,
   });
 
