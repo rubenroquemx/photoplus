@@ -2,14 +2,13 @@ import { cookies } from "next/headers";
 import prisma from "./prisma";
 
 const ADMIN_COOKIE_NAME = "photoplus_admin_auth";
-const CUSTOMER_COOKIE_NAME = "photoplus_customer_session";
 
 export function isAuthorizedAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   const configured = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
   if (!configured.trim()) {
-    // If not explicitly set in env, any connected Drive account in AdminSession is considered admin
-    return true;
+    // If ADMIN_EMAIL is not explicitly configured, deny access for safety
+    return false;
   }
 
   const allowedEmails = configured
@@ -25,43 +24,20 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const adminSecret = process.env.ADMIN_SESSION_SECRET || "photoplus_super_secret_key_change_in_production_12345";
 
-  // 1. Direct admin cookie check
-  if (token && token === adminSecret) {
-    return true;
+  // Strict check: Must have the specific admin session cookie
+  if (!token || token !== adminSecret) {
+    return false;
   }
 
-  // 2. Check if user is logged in via Google Customer session and is the designated Admin Email
-  const customerId = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
+  // Ensure DB schema exists
   try {
     const { ensureDatabaseSchema } = await import("./db-init");
     await ensureDatabaseSchema();
-
-    if (customerId) {
-      const customer = await prisma.customer.findUnique({
-        where: { id: customerId },
-        select: { email: true },
-      });
-
-      if (customer && isAuthorizedAdminEmail(customer.email)) {
-        return true;
-      }
-    }
-
-    // 3. Check if there's a connected Admin Google Drive session
-    const adminSession = await prisma.adminSession.findFirst({
-      where: { refreshToken: { not: null } },
-      orderBy: { updatedAt: "desc" },
-      select: { email: true },
-    });
-
-    if (adminSession && isAuthorizedAdminEmail(adminSession.email)) {
-      if (token === adminSecret) return true;
-    }
   } catch (err) {
-    console.error("Error verifying admin authentication from DB:", err);
+    console.error("Error ensuring schema:", err);
   }
 
-  return false;
+  return true;
 }
 
 export async function setAdminSession() {

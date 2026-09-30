@@ -65,10 +65,9 @@ export async function GET(request: NextRequest) {
 
     await setCustomerSession(customer.id);
 
-    // If this customer email is also an authorized ADMIN_EMAIL, set admin session too!
-    const { isAuthorizedAdminEmail, setAdminSession } = await import("@/lib/admin-auth");
-    if (isAuthorizedAdminEmail(email)) {
-      await setAdminSession();
+    // Prevent redirecting customer login to admin panel
+    if (returnTo.startsWith("/admin")) {
+      returnTo = "/mi-cuenta";
     }
 
     return NextResponse.redirect(`${appUrl}${returnTo}`);

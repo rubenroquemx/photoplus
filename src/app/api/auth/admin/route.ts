@@ -13,7 +13,10 @@ export async function GET() {
   const isAuth = await isAdminAuthenticated();
   let session = null;
   try {
-    session = await prisma.adminSession.findFirst({
+    const { isAuthorizedAdminEmail } = await import("@/lib/admin-auth");
+    const configured = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
+    const sessions = await prisma.adminSession.findMany({
+      where: { refreshToken: { not: null } },
       orderBy: { updatedAt: "desc" },
       select: {
         email: true,
@@ -22,6 +25,9 @@ export async function GET() {
         updatedAt: true,
       },
     });
+    session = configured.trim()
+      ? sessions.find((s) => isAuthorizedAdminEmail(s.email)) || null
+      : sessions[0] || null;
   } catch (err) {
     console.error("Error fetching admin session:", err);
   }

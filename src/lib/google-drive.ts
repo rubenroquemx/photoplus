@@ -42,6 +42,13 @@ export async function handleGoogleOAuthCallback(code: string) {
   const name = userInfo.data.name || "Fotógrafo Admin";
   const picture = userInfo.data.picture || null;
 
+  const { isAuthorizedAdminEmail } = await import("./admin-auth");
+  if (!isAuthorizedAdminEmail(email)) {
+    throw new Error(
+      `Acceso denegado: El correo ${email} no coincide con la cuenta de administrador configurada (ADMIN_EMAIL).`
+    );
+  }
+
   const expiresAt = tokens.expiry_date ? new Date(tokens.expiry_date) : null;
 
   const adminSession = await prisma.adminSession.upsert({
@@ -70,15 +77,22 @@ export async function getAuthenticatedDriveClient(): Promise<drive_v3.Drive> {
   const { ensureDatabaseSchema } = await import("./db-init");
   await ensureDatabaseSchema();
 
-  const session = await prisma.adminSession.findFirst({
+  const { isAuthorizedAdminEmail } = await import("./admin-auth");
+  const configured = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
+
+  const sessions = await prisma.adminSession.findMany({
     where: {
       refreshToken: { not: null },
     },
     orderBy: { updatedAt: "desc" },
   });
 
+  const session = configured.trim()
+    ? sessions.find((s) => isAuthorizedAdminEmail(s.email))
+    : sessions[0];
+
   if (!session || !session.refreshToken) {
-    throw new Error("No hay una cuenta de Google Drive conectada. Por favor conecta tu cuenta de Google en el panel de administración.");
+    throw new Error("No hay una cuenta de Google Drive autorizada conectada. Por favor conecta tu cuenta de administrador en el panel.");
   }
 
   const oauth2Client = getOAuth2Client();
