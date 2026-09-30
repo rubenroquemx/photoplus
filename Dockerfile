@@ -2,7 +2,7 @@
 
 FROM node:20-alpine AS base
 
-# Install libc6-compat & python for sharp/native modules if needed
+# Install libc6-compat
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
@@ -38,18 +38,19 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Create data directory for persistent SQLite database
-RUN mkdir -p /app/prisma && chown -R nextjs:nodejs /app/prisma
-
-# Copy standalone build
+# Copy dependencies, standalone build, prisma, and entrypoint
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
+
+RUN chmod +x ./docker-entrypoint.sh
 
 USER nextjs
 
 EXPOSE 3005
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
