@@ -112,6 +112,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { ensureDatabaseSchema } = await import("@/lib/db-init");
+    await ensureDatabaseSchema();
+
     const { folderId, folderName, createdTime, autoSyncAll } = await request.json();
 
     // Auto-sync all folders from Drive that are not yet imported or need sync

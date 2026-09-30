@@ -1,6 +1,9 @@
 import prisma from "./prisma";
 
 export async function getStoreSettings() {
+  const { ensureDatabaseSchema } = await import("./db-init");
+  await ensureDatabaseSchema();
+
   let settings = await prisma.storeSetting.findUnique({
     where: { id: "main" },
   });
