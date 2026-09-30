@@ -42,6 +42,9 @@ export async function GET(request: NextRequest) {
     const name = userInfo.data.name || "Cliente";
     const picture = userInfo.data.picture || null;
 
+    const { ensureDatabaseSchema } = await import("@/lib/db-init");
+    await ensureDatabaseSchema();
+
     // Upsert customer
     const customer = await prisma.customer.upsert({
       where: { email },

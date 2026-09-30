@@ -1,9 +1,11 @@
 #!/bin/sh
 set -e
 
-if [ -n "$DATABASE_URL" ] && [ -f "./node_modules/prisma/build/index.js" ]; then
-  echo "==> Verificando y sincronizando tablas en PostgreSQL con Prisma..."
-  node ./node_modules/prisma/build/index.js db push --skip-generate || echo "Aviso: Se continuó sin db push inmediato."
+if [ -n "$DATABASE_URL" ]; then
+  echo "==> Verificando y sincronizando tablas en PostgreSQL..."
+  if [ -f "./scripts/init-db.mjs" ]; then
+    node ./scripts/init-db.mjs || echo "Aviso: Se continuó sin init-db inmediato."
+  fi
 fi
 
 echo "==> Iniciando PhotoPlus en producción..."

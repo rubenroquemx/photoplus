@@ -32,27 +32,33 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
   // 2. Check if user is logged in via Google Customer session and is the designated Admin Email
   const customerId = cookieStore.get(CUSTOMER_COOKIE_NAME)?.value;
-  if (customerId) {
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
+  try {
+    const { ensureDatabaseSchema } = await import("./db-init");
+    await ensureDatabaseSchema();
+
+    if (customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId },
+        select: { email: true },
+      });
+
+      if (customer && isAuthorizedAdminEmail(customer.email)) {
+        return true;
+      }
+    }
+
+    // 3. Check if there's a connected Admin Google Drive session
+    const adminSession = await prisma.adminSession.findFirst({
+      where: { refreshToken: { not: null } },
+      orderBy: { updatedAt: "desc" },
       select: { email: true },
     });
 
-    if (customer && isAuthorizedAdminEmail(customer.email)) {
-      return true;
+    if (adminSession && isAuthorizedAdminEmail(adminSession.email)) {
+      if (token === adminSecret) return true;
     }
-  }
-
-  // 3. Check if there's a connected Admin Google Drive session
-  const adminSession = await prisma.adminSession.findFirst({
-    where: { refreshToken: { not: null } },
-    orderBy: { updatedAt: "desc" },
-    select: { email: true },
-  });
-
-  if (adminSession && isAuthorizedAdminEmail(adminSession.email)) {
-    // If the admin already connected their Google account, verify if token matches
-    if (token === adminSecret) return true;
+  } catch (err) {
+    console.error("Error verifying admin authentication from DB:", err);
   }
 
   return false;

@@ -28,6 +28,9 @@ export function getGoogleAuthUrl(): string {
 }
 
 export async function handleGoogleOAuthCallback(code: string) {
+  const { ensureDatabaseSchema } = await import("./db-init");
+  await ensureDatabaseSchema();
+
   const oauth2Client = getOAuth2Client();
   const { tokens } = await oauth2Client.getToken(code);
   oauth2Client.setCredentials(tokens);
@@ -64,6 +67,9 @@ export async function handleGoogleOAuthCallback(code: string) {
 }
 
 export async function getAuthenticatedDriveClient(): Promise<drive_v3.Drive> {
+  const { ensureDatabaseSchema } = await import("./db-init");
+  await ensureDatabaseSchema();
+
   const session = await prisma.adminSession.findFirst({
     where: {
       refreshToken: { not: null },
