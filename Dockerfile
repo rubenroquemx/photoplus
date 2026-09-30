@@ -16,10 +16,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Limit memory to 768MB and 1 CPU worker to prevent VPS Out Of Memory crashes
+# Optimize memory and disable telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=768"
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 RUN npx prisma generate
 RUN npm run build
