@@ -62,6 +62,12 @@ export async function GET(request: NextRequest) {
 
     await setCustomerSession(customer.id);
 
+    // If this customer email is also an authorized ADMIN_EMAIL, set admin session too!
+    const { isAuthorizedAdminEmail, setAdminSession } = await import("@/lib/admin-auth");
+    if (isAuthorizedAdminEmail(email)) {
+      await setAdminSession();
+    }
+
     return NextResponse.redirect(`${appUrl}${returnTo}`);
   } catch (err: unknown) {
     console.error("Error authenticating customer with Google:", err);

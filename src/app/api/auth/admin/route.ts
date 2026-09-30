@@ -18,6 +18,7 @@ export async function GET() {
     authenticated: isAuth,
     driveConnected: !!session,
     account: session,
+    adminEmail: process.env.ADMIN_EMAIL || null,
   });
 }
 
@@ -30,9 +31,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: "Sesión cerrada" });
     }
 
-    const expectedPassword = process.env.ADMIN_PASSWORD || "adminphotoplus";
+    const expectedPassword = (process.env.ADMIN_PASSWORD || "adminphotoplus").trim();
 
-    if (password === expectedPassword) {
+    if (password && password.trim() === expectedPassword) {
       await setAdminSession();
       return NextResponse.json({ success: true, message: "Acceso concedido" });
     }

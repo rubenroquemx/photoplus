@@ -31,9 +31,10 @@ export async function getCustomerSession(): Promise<CustomerSessionUser | null> 
 
 export async function setCustomerSession(customerId: string) {
   const cookieStore = await cookies();
+  const isHttps = (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://");
   cookieStore.set(CUSTOMER_COOKIE_NAME, customerId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30, // 30 days

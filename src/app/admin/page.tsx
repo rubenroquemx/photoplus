@@ -32,6 +32,7 @@ interface AdminAuthStatus {
     picture?: string | null;
     updatedAt: string;
   } | null;
+  adminEmail?: string | null;
 }
 
 interface DriveFolder {
@@ -173,6 +174,17 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchAuthStatus();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get("error");
+      const msg = params.get("msg");
+      if (err) {
+        setLoginError(decodeURIComponent(err));
+      }
+      if (msg) {
+        setSyncMessage({ text: decodeURIComponent(msg), type: "success" });
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -360,10 +372,64 @@ export default function AdminPage() {
             </div>
             <h1 className="text-2xl font-black text-center">Panel de Administración</h1>
             <p className="text-sm text-neutral-400 text-center mt-1">
-              Ingresa la contraseña de administrador para gestionar Google Drive y ventas.
+              Accede para gestionar Google Drive, catálogo y ventas.
             </p>
 
-            <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            {loginError && (
+              <div className="mt-4 p-3.5 rounded-xl bg-rose-950/60 border border-rose-900 text-rose-400 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            {/* Iniciar sesión con Google (Admin) */}
+            <div className="mt-6 space-y-2">
+              <a
+                href="/api/auth/google"
+                className="w-full py-3.5 px-4 bg-white hover:bg-neutral-100 text-neutral-900 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-3 transition-all cursor-pointer"
+              >
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.98 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Iniciar sesión con Google</span>
+              </a>
+
+              {authStatus?.adminEmail ? (
+                <p className="text-center text-[11px] text-neutral-400">
+                  Cuenta autorizada: <span className="text-emerald-400 font-mono font-medium">{authStatus.adminEmail}</span>
+                </p>
+              ) : (
+                <p className="text-center text-[11px] text-neutral-500">
+                  Vincula tu cuenta de Google para administrar y conectar Drive
+                </p>
+              )}
+            </div>
+
+            <div className="relative my-6 text-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-800"></div>
+              </div>
+              <span className="relative bg-neutral-900 px-3 text-[11px] uppercase tracking-wider text-neutral-500 font-medium">
+                o contraseña maestra
+              </span>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-neutral-300 mb-1">
                   Contraseña de acceso
@@ -374,21 +440,15 @@ export default function AdminPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Contraseña (por defecto: adminphotoplus)"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full px-4 py-3 rounded-xl bg-neutral-800 border border-neutral-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder:text-neutral-500"
                 />
               </div>
-
-              {loginError && (
-                <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-900 text-rose-400 text-xs">
-                  {loginError}
-                </div>
-              )}
 
               <button
                 type="submit"
                 className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
               >
-                Entrar al Panel
+                Entrar con contraseña
               </button>
             </form>
           </div>

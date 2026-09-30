@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleGoogleOAuthCallback } from "@/lib/google-drive";
+import { setAdminSession, isAuthorizedAdminEmail } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
   const error = searchParams.get("error");
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3005").replace(/\/$/, "");
 
   if (error || !code) {
     return NextResponse.redirect(`${appUrl}/admin?error=${encodeURIComponent(error || "No se recibió código de autorización")}`);
   }
 
   try {
-    await handleGoogleOAuthCallback(code);
+    const adminSession = await handleGoogleOAuthCallback(code);
+
+    if (!isAuthorizedAdminEmail(adminSession.email)) {
+      return NextResponse.redirect(
+        `${appUrl}/admin?error=${encodeURIComponent(
+          `El correo ${adminSession.email} no coincide con la cuenta de administrador autorizada (ADMIN_EMAIL).`
+        )}`
+      );
+    }
+
+    // Grant admin session cookie
+    await setAdminSession();
+
     return NextResponse.redirect(`${appUrl}/admin?connected=true&msg=Google+Drive+conectado+exitosamente`);
   } catch (err: unknown) {
     console.error("Error exchanging Google code:", err);
