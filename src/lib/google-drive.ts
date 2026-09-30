@@ -103,6 +103,13 @@ export async function getAuthenticatedDriveClient(): Promise<drive_v3.Drive> {
   return google.drive({ version: "v3", auth: oauth2Client });
 }
 
+export function extractDriveFolderId(input: string): string {
+  const trimmed = input.trim();
+  const match = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  return trimmed;
+}
+
 export async function listDriveFolders() {
   const drive = await getAuthenticatedDriveClient();
   const folderList = await drive.files.list({
@@ -110,6 +117,8 @@ export async function listDriveFolders() {
     fields: "files(id, name, createdTime, modifiedTime, shared)",
     pageSize: 100,
     orderBy: "createdTime desc",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   return folderList.data.files || [];
@@ -118,7 +127,8 @@ export async function listDriveFolders() {
 export async function listDriveImagesInFolder(folderId: string) {
   const drive = await getAuthenticatedDriveClient();
 
-  const query = `'${folderId}' in parents and (mimeType contains 'image/' or name contains '.jpg' or name contains '.jpeg' or name contains '.png' or name contains '.webp') and trashed = false`;
+  // Valid Google Drive API query: query files in folder and filter images in JavaScript
+  const query = `'${folderId}' in parents and trashed = false`;
 
   const files: Array<{
     id: string;
@@ -138,21 +148,29 @@ export async function listDriveImagesInFolder(folderId: string) {
       fields: "nextPageToken, files(id, name, mimeType, size, imageMediaMetadata(width, height), thumbnailLink)",
       pageSize: 100,
       pageToken: currentToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
       orderBy: "name",
     });
 
     if (listRes.data.files) {
       for (const f of listRes.data.files) {
         if (f.id && f.name) {
-          files.push({
-            id: f.id,
-            name: f.name,
-            mimeType: f.mimeType || "image/jpeg",
-            size: f.size ? parseInt(f.size, 10) : undefined,
-            width: f.imageMediaMetadata?.width || undefined,
-            height: f.imageMediaMetadata?.height || undefined,
-            thumbnailLink: f.thumbnailLink || undefined,
-          });
+          const isImage =
+            (f.mimeType && f.mimeType.startsWith("image/")) ||
+            /\.(jpe?g|png|webp|avif|heic|tiff?)$/i.test(f.name);
+
+          if (isImage) {
+            files.push({
+              id: f.id,
+              name: f.name,
+              mimeType: f.mimeType || "image/jpeg",
+              size: f.size ? parseInt(f.size, 10) : undefined,
+              width: f.imageMediaMetadata?.width || undefined,
+              height: f.imageMediaMetadata?.height || undefined,
+              thumbnailLink: f.thumbnailLink || undefined,
+            });
+          }
         }
       }
     }
@@ -175,11 +193,12 @@ export async function getDriveFileReadableStream(fileId: string): Promise<{
   const meta = await drive.files.get({
     fileId,
     fields: "id, name, mimeType, size",
+    supportsAllDrives: true,
   });
 
   // Get stream
   const response = await drive.files.get(
-    { fileId, alt: "media" },
+    { fileId, alt: "media", supportsAllDrives: true },
     { responseType: "stream" }
   );
 

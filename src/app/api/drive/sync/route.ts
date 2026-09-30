@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { listDriveFolders, listDriveImagesInFolder, getAuthenticatedDriveClient } from "@/lib/google-drive";
+import { extractDriveFolderId, listDriveFolders, listDriveImagesInFolder, getAuthenticatedDriveClient } from "@/lib/google-drive";
 import prisma from "@/lib/prisma";
 import { getStoreSettings } from "@/lib/settings";
 
 async function syncSingleFolder(
-  folderId: string,
+  rawFolderId: string,
   folderName?: string,
   folderCreatedTime?: string | null
 ) {
+  const folderId = extractDriveFolderId(rawFolderId);
   const settings = await getStoreSettings();
   const photoPrice = settings.defaultPrice || 50.0;
   const drive = await getAuthenticatedDriveClient();
@@ -18,12 +19,18 @@ async function syncSingleFolder(
   let createdTimeStr = folderCreatedTime;
 
   if (!name || !createdTimeStr) {
-    const meta = await drive.files.get({
-      fileId: folderId,
-      fields: "id, name, createdTime",
-    });
-    name = meta.data.name || "Nuevo Álbum";
-    createdTimeStr = meta.data.createdTime || null;
+    try {
+      const meta = await drive.files.get({
+        fileId: folderId,
+        fields: "id, name, createdTime",
+        supportsAllDrives: true,
+      });
+      name = meta.data.name || "Nuevo Álbum";
+      createdTimeStr = meta.data.createdTime || null;
+    } catch (err: unknown) {
+      console.warn("Could not fetch metadata for folderId:", folderId, err);
+      name = name || "Álbum de Google Drive";
+    }
   }
 
   const folderDate = createdTimeStr ? new Date(createdTimeStr) : new Date();
@@ -132,12 +139,19 @@ export async function POST(request: NextRequest) {
 
     if (!folderId) {
       return NextResponse.json(
-        { error: "El ID de la carpeta de Drive es obligatorio" },
+        { error: "El ID o enlace de la carpeta de Google Drive es obligatorio" },
         { status: 400 }
       );
     }
 
     const result = await syncSingleFolder(folderId, folderName, createdTime);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.message || "No se encontraron fotos en la carpeta especificada" },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(result);
   } catch (error: unknown) {
     console.error("Error syncing Drive folder:", error);

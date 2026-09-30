@@ -101,6 +101,7 @@ export default function AdminPage() {
   const [selectedFolderToSync, setSelectedFolderToSync] = useState<DriveFolder | null>(null);
   const [syncPrice, setSyncPrice] = useState(50);
   const [syncWatermark, setSyncWatermark] = useState("PHOTOPLUS • MUESTRA");
+  const [manualFolderInput, setManualFolderInput] = useState("");
 
   // Albums & Orders state
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -206,6 +207,17 @@ export default function AdminPage() {
     fetchAuthStatus();
   };
 
+  const handleManualSync = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = manualFolderInput.trim();
+    if (!val) return;
+    const cleanId = val.replace(/^.*folders\//, "").replace(/\?.*$/, "");
+    setSelectedFolderToSync({
+      id: cleanId,
+      name: `Carpeta Google Drive (${cleanId.slice(0, 10)}...)`,
+    });
+  };
+
   const handleSyncFolder = async (folder: DriveFolder) => {
     setSyncingFolderId(folder.id);
     setSyncMessage(null);
@@ -229,12 +241,17 @@ export default function AdminPage() {
         throw new Error(data.error || "Error al sincronizar");
       }
 
+      if (data.success === false) {
+        throw new Error(data.message || data.error || "No se pudo sincronizar la carpeta");
+      }
+
       setSyncMessage({
-        text: `¡Carpeta "${folder.name}" sincronizada con éxito con la fecha de Drive y precio base! (${data.totalPhotos} fotos procesadas)`,
+        text: `¡Carpeta "${data.albumTitle || folder.name}" sincronizada con éxito! (${data.totalPhotos} fotografías importadas)`,
         type: "success",
       });
 
       setSelectedFolderToSync(null);
+      setManualFolderInput("");
       fetchAlbums();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al sincronizar la carpeta";
@@ -537,11 +554,42 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Manual Folder Sync Box */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Sincronizar por Enlace o ID de Carpeta</h3>
+                  <p className="text-xs text-neutral-400">
+                    Pega el enlace de Google Drive o el ID de la carpeta que deseas importar a la tienda.
+                  </p>
+                </div>
+              </div>
+              <form onSubmit={handleManualSync} className="mt-3 flex flex-col sm:flex-row gap-2.5">
+                <input
+                  type="text"
+                  value={manualFolderInput}
+                  onChange={(e) => setManualFolderInput(e.target.value)}
+                  placeholder="https://drive.google.com/drive/folders/1ABC... o ID de carpeta"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white text-xs placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!manualFolderInput.trim() || !authStatus?.driveConnected}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Sincronizar Esta Carpeta
+                </button>
+              </form>
+            </div>
+
             {/* Folder Browser */}
             <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h3 className="text-base font-bold text-white">Carpetas en tu Google Drive</h3>
+                  <h3 className="text-base font-bold text-white">Carpetas detectadas en Google Drive</h3>
                   <p className="text-xs text-neutral-400 mt-0.5">
                     Selecciona una carpeta para sincronizarla como álbum fotográfico en tu tienda.
                   </p>
@@ -553,7 +601,7 @@ export default function AdminPage() {
                     className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-xs font-bold text-white flex items-center gap-1.5 shadow-md shadow-rose-600/20 transition-all cursor-pointer disabled:opacity-50"
                   >
                     <FolderSync className="w-3.5 h-3.5" />
-                    <span>Sincronizar Todas las Carpetas Automáticamente</span>
+                    <span>Sincronizar Todas Automáticamente</span>
                   </button>
                   <button
                     onClick={fetchDriveFolders}
@@ -582,8 +630,13 @@ export default function AdminPage() {
                   <p className="text-xs text-neutral-400">Consultando carpetas en Google Drive...</p>
                 </div>
               ) : driveFolders.length === 0 ? (
-                <div className="text-center py-12 border border-dashed border-neutral-800 rounded-2xl">
-                  <p className="text-sm text-neutral-400">No se encontraron carpetas en tu Google Drive.</p>
+                <div className="text-center py-10 px-4 border border-dashed border-neutral-800 rounded-2xl">
+                  <p className="text-sm font-semibold text-neutral-300">
+                    No se encontraron carpetas en la raíz principal de tu Drive
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
+                    Si tu carpeta se encuentra en "Compartidos conmigo", en una unidad compartida o en una subcarpeta, usa el recuadro superior para pegar su enlace directo y sincronizarla de inmediato.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
