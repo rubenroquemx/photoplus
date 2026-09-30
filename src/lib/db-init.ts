@@ -35,11 +35,14 @@ const DDL_STATEMENTS = [
     "currency" TEXT NOT NULL DEFAULT 'MXN',
     "watermarkText" TEXT NOT NULL DEFAULT 'PHOTOPLUS • MUESTRA',
     "watermarkOpacity" DOUBLE PRECISION NOT NULL DEFAULT 0.40,
+    "driveRootFolderId" TEXT,
     "contactEmail" TEXT,
     "contactPhone" TEXT,
     "instagramUrl" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+
+  `ALTER TABLE "StoreSetting" ADD COLUMN IF NOT EXISTS "driveRootFolderId" TEXT`,
 
   `CREATE TABLE IF NOT EXISTS "Album" (
     "id" TEXT NOT NULL PRIMARY KEY,

@@ -79,6 +79,7 @@ interface StoreSettings {
   defaultPrice: number;
   watermarkText: string;
   watermarkOpacity: number;
+  driveRootFolderId?: string | null;
   contactEmail?: string | null;
 }
 
@@ -112,6 +113,7 @@ export default function AdminPage() {
     defaultPrice: 50,
     watermarkText: "PHOTOPLUS • MUESTRA",
     watermarkOpacity: 0.35,
+    driveRootFolderId: null,
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -207,15 +209,45 @@ export default function AdminPage() {
     fetchAuthStatus();
   };
 
-  const handleManualSync = (e: React.FormEvent) => {
+  const handleManualSync = async (e: React.FormEvent) => {
     e.preventDefault();
-    const val = manualFolderInput.trim();
+    const val = manualFolderInput.trim() || settings.driveRootFolderId || "";
     if (!val) return;
     const cleanId = val.replace(/^.*folders\//, "").replace(/\?.*$/, "");
-    setSelectedFolderToSync({
-      id: cleanId,
-      name: `Carpeta Google Drive (${cleanId.slice(0, 10)}...)`,
-    });
+
+    setSyncingFolderId(cleanId);
+    setSyncMessage(null);
+
+    try {
+      const res = await fetch("/api/drive/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          folderId: cleanId,
+          price: settings.defaultPrice || 50,
+          watermarkText: settings.watermarkText || "PHOTOPLUS • MUESTRA",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error al sincronizar");
+      }
+
+      setSyncMessage({
+        text: data.message || `¡Sincronización completada! (${data.totalPhotos || 0} fotos procesadas)`,
+        type: "success",
+      });
+
+      fetchAlbums();
+      fetchSettings();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al sincronizar la carpeta";
+      setSyncMessage({ text: msg, type: "error" });
+    } finally {
+      setSyncingFolderId(null);
+    }
   };
 
   const handleSyncFolder = async (folder: DriveFolder) => {
@@ -554,34 +586,55 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Manual Folder Sync Box */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
-                  <Plus className="w-4 h-4" />
+            {/* Carpeta Raíz con Subcarpetas */}
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+                  <FolderSync className="w-6 h-6" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Sincronizar por Enlace o ID de Carpeta</h3>
-                  <p className="text-xs text-neutral-400">
-                    Pega el enlace de Google Drive o el ID de la carpeta que deseas importar a la tienda.
+                <div className="flex-1">
+                  <h3 className="text-base font-bold text-white">Carpeta Raíz de tu Tienda en Google Drive</h3>
+                  <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                    Dentro de esta carpeta coloca tus subcarpetas con fotos (ej. <em>Boda Andrea</em>, <em>Sesión Primavera</em>). 
+                    Al sincronizar, <strong>cada subcarpeta se convertirá en un álbum individual</strong> con el nombre exacto de la carpeta, la fecha original de Drive y el precio base configurado.
                   </p>
                 </div>
               </div>
-              <form onSubmit={handleManualSync} className="mt-3 flex flex-col sm:flex-row gap-2.5">
-                <input
-                  type="text"
-                  value={manualFolderInput}
-                  onChange={(e) => setManualFolderInput(e.target.value)}
-                  placeholder="https://drive.google.com/drive/folders/1ABC... o ID de carpeta"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white text-xs placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!manualFolderInput.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer whitespace-nowrap"
-                >
-                  Sincronizar Esta Carpeta
-                </button>
+
+              <form onSubmit={handleManualSync} className="mt-5 space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={manualFolderInput}
+                    onChange={(e) => setManualFolderInput(e.target.value)}
+                    placeholder={settings.driveRootFolderId ? `Carpeta actual: ${settings.driveRootFolderId}` : "Pega aquí el enlace de tu carpeta raíz de Google Drive..."}
+                    className="flex-1 px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 text-white text-xs placeholder:text-neutral-600 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!manualFolderInput.trim() && !settings.driveRootFolderId}
+                    className="px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-rose-600/25 transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-2"
+                  >
+                    {syncingFolderId ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Sincronizando Álbumes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FolderSync className="w-4 h-4" />
+                        <span>Sincronizar Álbumes desde Carpeta Raíz</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {settings.driveRootFolderId && (
+                  <p className="text-[11px] text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    Carpeta raíz vinculada en la tienda: <code className="text-neutral-300 font-mono">{settings.driveRootFolderId}</code>
+                  </p>
+                )}
               </form>
             </div>
 

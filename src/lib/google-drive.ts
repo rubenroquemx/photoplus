@@ -128,6 +128,21 @@ export function extractDriveFolderId(input: string): string {
   return trimmed;
 }
 
+export async function listSubfoldersInFolder(parentFolderId: string) {
+  const drive = await getAuthenticatedDriveClient();
+  const cleanId = extractDriveFolderId(parentFolderId);
+  const folderList = await drive.files.list({
+    q: `'${cleanId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: "files(id, name, createdTime, modifiedTime)",
+    pageSize: 100,
+    orderBy: "createdTime desc",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  return folderList.data.files || [];
+}
+
 export async function listDriveFolders() {
   const drive = await getAuthenticatedDriveClient();
   const folderList = await drive.files.list({

@@ -133,6 +133,7 @@ model StoreSetting {
   currency         String   @default("MXN")
   watermarkText    String   @default("PHOTOPLUS • MUESTRA")
   watermarkOpacity Float    @default(0.40)
+  driveRootFolderId String?
   contactEmail     String?
   contactPhone     String?
   instagramUrl     String?

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { extractDriveFolderId, listDriveFolders, listDriveImagesInFolder, getAuthenticatedDriveClient } from "@/lib/google-drive";
+import {
+  extractDriveFolderId,
+  listDriveFolders,
+  listSubfoldersInFolder,
+  listDriveImagesInFolder,
+  getAuthenticatedDriveClient,
+} from "@/lib/google-drive";
 import prisma from "@/lib/prisma";
 import { getStoreSettings } from "@/lib/settings";
 
@@ -43,7 +49,7 @@ async function syncSingleFolder(
       success: false,
       folderId,
       name,
-      message: "No se encontraron imágenes en esta carpeta",
+      message: `No se encontraron imágenes en la carpeta "${name}". Asegúrate de que contenga archivos JPG, PNG o WEBP.`,
     };
   }
 
@@ -115,14 +121,24 @@ export async function POST(request: NextRequest) {
     const { ensureDatabaseSchema } = await import("@/lib/db-init");
     await ensureDatabaseSchema();
 
-    const { folderId, folderName, createdTime, autoSyncAll } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const { folderId, folderName, createdTime, autoSyncAll, isRootFolderExplicit } = body;
 
-    // Auto-sync all folders from Drive that are not yet imported or need sync
+    const settings = await getStoreSettings();
+
+    // 1. Auto-sync from configured Root Folder or all root folders
     if (autoSyncAll) {
-      const allFolders = await listDriveFolders();
-      const results = [];
+      const rootFolderId = settings.driveRootFolderId || process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+      let targetFolders: Array<{ id?: string | null; name?: string | null; createdTime?: string | null }> = [];
 
-      for (const f of allFolders) {
+      if (rootFolderId) {
+        targetFolders = await listSubfoldersInFolder(rootFolderId);
+      } else {
+        targetFolders = await listDriveFolders();
+      }
+
+      const results = [];
+      for (const f of targetFolders) {
         if (f.id && f.name) {
           try {
             const res = await syncSingleFolder(f.id, f.name, f.createdTime);
@@ -133,10 +149,16 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const validResults = results.filter((r) => r.success);
+      const totalPhotos = validResults.reduce((acc, r) => acc + (r.totalPhotos || 0), 0);
+
       return NextResponse.json({
         success: true,
         autoSynced: true,
+        totalAlbumsSynced: validResults.length,
+        totalPhotos,
         results,
+        message: `¡Sincronización completada! Se procesaron ${validResults.length} álbumes (${totalPhotos} fotos) con sus nombres y fechas originales.`,
       });
     }
 
@@ -147,7 +169,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await syncSingleFolder(folderId, folderName, createdTime);
+    const cleanFolderId = extractDriveFolderId(folderId);
+
+    // 2. Check if this folder contains subfolders (ROOT FOLDER PATTERN)
+    const subfolders = await listSubfoldersInFolder(cleanFolderId);
+
+    if (subfolders.length > 0 || isRootFolderExplicit) {
+      // It is a ROOT FOLDER! Remember it in StoreSettings
+      await prisma.storeSetting.upsert({
+        where: { id: "main" },
+        update: { driveRootFolderId: cleanFolderId },
+        create: { driveRootFolderId: cleanFolderId },
+      });
+
+      if (subfolders.length === 0) {
+        return NextResponse.json({
+          error: "La carpeta raíz especificada no contiene subcarpetas con imágenes.",
+        }, { status: 400 });
+      }
+
+      // Sync each subfolder as an independent album named after the subfolder
+      const results = [];
+      for (const sub of subfolders) {
+        if (sub.id && sub.name) {
+          try {
+            const res = await syncSingleFolder(sub.id, sub.name, sub.createdTime);
+            results.push(res);
+          } catch (subErr) {
+            console.error(`Error syncing subfolder ${sub.name}:`, subErr);
+          }
+        }
+      }
+
+      const validResults = results.filter((r) => r.success);
+      const totalPhotos = validResults.reduce((acc, r) => acc + (r.totalPhotos || 0), 0);
+
+      return NextResponse.json({
+        success: true,
+        isRootFolder: true,
+        rootFolderId: cleanFolderId,
+        subfolderCount: subfolders.length,
+        totalAlbumsSynced: validResults.length,
+        totalPhotos,
+        results,
+        message: `¡Carpeta raíz sincronizada! Se crearon/actualizaron ${validResults.length} álbumes individuales con el nombre de cada carpeta y su fecha original (${totalPhotos} fotografías en total).`,
+      });
+    }
+
+    // 3. Single folder synchronization
+    const result = await syncSingleFolder(cleanFolderId, folderName, createdTime);
     if (!result.success) {
       return NextResponse.json(
         { error: result.message || "No se encontraron fotos en la carpeta especificada" },
